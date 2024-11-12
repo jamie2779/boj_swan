@@ -1,16 +1,29 @@
-// Original: https://discordjs.guide/creating-your-bot/creating-commands.html#command-deployment-script
-import {SlashCommandBuilder} from "@discordjs/builders";
-import {REST} from '@discordjs/rest';
-import {Routes} from 'discord-api-types/v9';
+import { REST } from '@discordjs/rest';
+import { Routes } from 'discord-api-types/v10';
+import { SlashCommandBuilder } from '@discordjs/builders';
+import dotenv from 'dotenv';
+
+
+dotenv.config();
 
 const commands = [
-    new SlashCommandBuilder().setName('안녕하세요').setDescription('인사를 합니다.'),
+    new SlashCommandBuilder().setName('등록').setDescription('BOJ Handle을 등록합니다.'),
+    new SlashCommandBuilder().setName('정보').setDescription('특정 유저의 정보를 확인합니다.').addMentionableOption(option => option.setName('user').setDescription('유저를 선택하세요.')),
 ].map(command => command.toJSON());
 
-export const registerCommands = (token, clientId, guildId) => {
-    const rest = new REST({version: '9'}).setToken(token);
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
 
-    rest.put(Routes.applicationGuildCommands(clientId, guildId), {body: commands})
-        .then(() => console.log('Successfully registered application commands.'))
-        .catch(console.error);
-}
+(async () => {
+    try {
+        console.log('슬래시 명령어를 서버에 등록 중입니다.');
+
+        await rest.put(
+            Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+            { body: commands },
+        );
+
+        console.log('슬래시 명령어 등록 완료.');
+    } catch (error) {
+        console.error(error);
+    }
+})();
