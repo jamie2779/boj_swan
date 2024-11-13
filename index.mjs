@@ -19,6 +19,7 @@ import {
 import {
     checkDiscordIdExists,
     createUser,
+    getUserById,
     getUserByDiscordId,
 } from "./database.mjs";
 import dotenv from "dotenv";
@@ -29,7 +30,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const EmbedFooterImageUrl =
     "https://cdn.discordapp.com/avatars/1305799574774087691/e5c81e2ac05a6892de19d5e4e479dda4";
-const EmbedFooterText = "모든 정보는 오후 6시와 새벽 6시에 업데이트됩니다.";
+const EmbedFooterText = "모든 정보는 오후 6시 30분과 새벽 6시 30분에 업데이트됩니다.";
 
 // 봇이 준비되었을 때 실행할 코드
 client.once("ready", () => {
@@ -38,8 +39,7 @@ client.once("ready", () => {
     // 특정 시간에 메시지를 보내는 스케줄러 설정
     const channelId = process.env.ANNOUNCEMENT_CHANNEL_ID; // 메시지를 보낼 채널의 ID를 입력하세요
 
-    // 매일 새벽 6시마다 메시지 전송 (0 6 * * *)
-    cron.schedule("1 6 * * *", async () => {
+    cron.schedule("30 6 * * *", async () => {
         //유저 정보 갱신
         try {
             await updateUserDataForActiveUsers();
@@ -65,39 +65,75 @@ client.once("ready", () => {
         const channel = await client.channels.fetch(channelId);
         let problems;
         try {
-            problems = getProblemsSolvedByActiveUsersOnDate(formattedDate);
+            problems = await getProblemsSolvedByActiveUsersOnDate(formattedDate);
         } catch (error) {
             console.error(
                 "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
                 error
             );
         }
-        for (const [user_id, user_problems] of problems) {
-            const user = await getUserByDiscordId(user_id);
-            const nickname = await getDiscordNickname(user.discord_id);
+
+        console.log(problems);
+        //problems라는 object를 value의 길이 내림차순으로 정렬
+        const sortedProblems = Object.fromEntries(
+            Object.entries(problems).sort(([, a], [, b]) => b.length - a.length)
+        );
+
+        for (const [user_id, user_problems] of Object.entries(sortedProblems)) {
+
+            const user = await getUserById(user_id);
+            let embed;
             const tierInfo = tierMapping[user.tier];
-            const embed = new EmbedBuilder()
-                .setColor(tierMapping[user.tier].color)
-                .setTitle(`${nickname}님이 ${formattedDate}에 해결한 문제들`)
-                .setDescription(
-                    `오늘 푼 문제 수: ${
-                        user_problems.length
-                    }, 조건에 맞는 문제 수: ${
-                        user_problems.filter(
+            const filteredProblems = user_problems.filter(
+                (problemHolder) => problemHolder.problem.level >= tierInfo.limit
+            )
+            if (filteredProblems.length > 0) {
+                embed = new EmbedBuilder()
+                    .setColor(0xADFF2F)
+                    .setTitle(`${user.handle}님이 ${formattedDate}의 문제를 풀었습니다.`)
+                    .setDescription(
+                        `오늘 푼 문제 수: ${user_problems.length
+                        }, 조건에 맞는 문제 수: ${filteredProblems.length
+                        }`
+                    )
+                    .setFooter({
+                        text: EmbedFooterText,
+                        iconURL: EmbedFooterImageUrl,
+                    });
+            }
+            else {
+                embed = new EmbedBuilder()
+                    .setColor(0xff0000)
+                    .setTitle(`${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`)
+                    .setDescription(
+                        `오늘 푼 문제 수: ${user_problems.length
+                        }, 조건에 맞는 문제 수: ${user_problems.filter(
                             (problem) => problem.level >= tierInfo.limit
                         ).length
-                    }`
-                )
-                .setFooter({
-                    text: EmbedFooterText,
-                    iconURL: EmbedFooterImageUrl,
-                });
-            channel.send({ embeds: [embed] });
+                        }`
+                    )
+                    .setFooter({
+                        text: EmbedFooterText,
+                        iconURL: EmbedFooterImageUrl,
+                    });
+            }
+
+            try {
+                // 지정된 채널 ID로 채널 객체 가져오기
+                const channel = await client.channels.fetch(channelId);
+
+                // 채널에 embed 메시지 전송
+                await channel.send({ embeds: [embed] });
+
+                console.log(`ANNOUNCEMENT_CHANNEL_ID(${channelId}) 채널로 메시지가 성공적으로 전송되었습니다.`);
+            } catch (error) {
+                console.error(`메시지를 보내는 도중 오류가 발생했습니다: ${error}`);
+            }
         }
     });
 
     // 매일 저녁 6시마다 메시지 전송 (0 18 * * *)
-    cron.schedule("30 3 * * *", async () => {
+    cron.schedule("30 18 * * *", async () => {
         //유저 정보 갱신
         try {
             await updateUserDataForActiveUsers();
@@ -123,7 +159,7 @@ client.once("ready", () => {
         const channel = await client.channels.fetch(channelId);
         let problems;
         try {
-            problems = getProblemsSolvedByActiveUsersOnDate(formattedDate);
+            problems = await getProblemsSolvedByActiveUsersOnDate(formattedDate);
         } catch (error) {
             console.error(
                 "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
@@ -131,39 +167,36 @@ client.once("ready", () => {
             );
         }
 
-        for (const [user_id, user_problems] of problems) {
-            if (user_problems.length > 0) continue;
+        console.log(problems);
+        for (const [user_id, user_problems] of Object.entries(problems)) {
+
+            const filteredProblems = user_problems.filter(
+                (problemHolder) => problemHolder.problem.level >= tierInfo.limit
+            )
+            if (filteredProblems.length > 0) continue;
             const user = await getUserById(user_id);
+
             const tierInfo = tierMapping[user.tier];
             const embed = new EmbedBuilder()
-                .setColor(0xff0000) // 실패를 나타내는 빨간색
+                .setColor(0xff0000)
                 .setTitle(`아직 ${formattedDate}의 문제를 풀지 않았습니다.`)
                 .setDescription(
-                    `오늘 푼 문제 수: ${
-                        user_problems.length
-                    }, 조건에 맞는 문제 수: ${
-                        user_problems.filter(
-                            (problem) => problem.level >= tierInfo.limit
-                        ).length
+                    `오늘 푼 문제 수: ${user_problems.length
+                    }, 조건에 맞는 문제 수: ${filteredProblems.length
                     }`
                 )
                 .setFooter({
                     text: EmbedFooterText,
                     iconURL: EmbedFooterImageUrl,
                 });
-            client.users.fetch(user.discord_id).then((user) => {
-                user.send({ embeds: [embed] })
-                    .then(() =>
-                        console.log(
-                            `DM이 ${user.nickname}에게 성공적으로 전송되었습니다.`
-                        )
-                    )
-                    .catch((error) =>
-                        console.error(
-                            `DM을 보내는 도중 오류가 발생했습니다: ${error}`
-                        )
-                    );
-            });
+
+            try {
+                const discordUser = await client.users.fetch(user.discord_id);
+                await discordUser.send({ embeds: [embed] });
+                console.log(`DM이 ${user.discord_id}에게 성공적으로 전송되었습니다.`);
+            } catch (error) {
+                console.error(`DM을 보내는 도중 오류가 발생했습니다: ${error}`);
+            }
         }
     });
 });
@@ -407,16 +440,13 @@ client.on("interactionCreate", async (interaction) => {
                         text: EmbedFooterText,
                         iconURL: EmbedFooterImageUrl,
                     });
+                //푼 문제 등록
+                saveSolvedProblems(user.id, true);
 
                 // 임베드 메시지 전송
                 await interaction.reply({ embeds: [embed] });
 
-                //푼 문제 등록
-                try {
-                    await saveSolvedProblems(user.id, true);
-                } catch (error) {
-                    console.error("푼 문제 저장 중 오류 발생:", error);
-                }
+
             } catch (error) {
                 console.error(error);
                 // 등록 실패 임베드 메시지 생성

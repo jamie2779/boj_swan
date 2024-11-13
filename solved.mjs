@@ -208,3 +208,37 @@ export async function getProblemsSolvedByActiveUsersOnDate(date) {
     }
     return solvedProblems;
 }
+
+
+//특정 유저의 일주일 벌금 조회 함수
+//벌금은 일주일마다 초기회 되며, 월요일부터 일요일까지가 1주일이다, 벌금은 1회에 2000원, 2회에 4000원, 3회에 8000원 이런 식으로 2배씩 증가한다.
+export async function getWeeklyFine(user_id, targetDate) {
+    //targetDate가 포함된 주의 월요일과 일요일을 구한다.
+    const target = new Date(targetDate);
+    const day = target.getDay();
+    const diff = target.getDate() - day + (day == 0 ? -6 : 1);
+    const monday = new Date(target.setDate(diff));
+
+    //유저 정보 조회
+    const user = await getUserById(user_id);
+
+
+    //월요일부터 일요일까지의 문제 해결 개수를 for문과 getProblemsSolvedByUserOnDate를 통해 구한다.
+    try {
+        let solvedCount = 0;
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            const problemsSolved = await getProblemsSolvedByUserOnDate(user_id, date);
+            const filteredProblems = user_problems.filter(
+                (problemHolder) => problemHolder.problem.level >= tierInfo.limit
+            )
+            solvedCount += problemsSolved.length;
+        }
+
+
+    } catch (error) {
+        console.error("Error fetching weekly fine:", error.message);
+        throw error;
+    }
+}

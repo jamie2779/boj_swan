@@ -78,6 +78,7 @@ export async function createUser({
 // id를 이용하여 사용자 정보 조회 함수
 export async function getUserById(user_id) {
     try {
+        user_id = parseInt(user_id);
         const user = await prisma.user.findUnique({
             where: { id: user_id },
         });
@@ -113,11 +114,7 @@ export async function getUserByHandle(handle) {
     }
 }
 
-// 애플리케이션 종료 시 Prisma 클라이언트 연결 해제
-process.on("beforeExit", async () => {
-    await prisma.$disconnect();
-    console.log("Prisma client disconnected");
-});
+
 
 //문제 등록 함수
 export async function createProblem({
@@ -268,3 +265,9 @@ export async function getProblemsSolvedByUserOnDate(user_id, targetDate) {
         throw error;
     }
 }
+
+// 애플리케이션 종료 시 Prisma 클라이언트 연결 해제
+process.on("beforeExit", async () => {
+    await prisma.$disconnect();
+    console.log("Prisma client disconnected");
+});
