@@ -60,7 +60,7 @@ client.once("ready", () => {
         const today = new Date();
         const year = today.getFullYear();
         const month = today.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
-        const day = today.getDate();
+        const day = today.getDate() - 1;
         const formattedDate = `${year}-${String(month).padStart(
             2,
             "0"
