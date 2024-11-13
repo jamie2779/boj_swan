@@ -640,7 +640,7 @@ client.on("interactionCreate", async (interaction) => {
                         iconURL: EmbedFooterImageUrl,
                     });
                 //푼 문제 등록
-                saveSolvedProblems(user.id, true);
+                saveSolvedProblems(user.id);
 
                 // 임베드 메시지 전송
                 await interaction.reply({ embeds: [embed] });
