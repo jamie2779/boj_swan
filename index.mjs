@@ -15,6 +15,7 @@ import {
     updateUserDataForActiveUsers,
     saveSolvedProblemsForActiveUsers,
     getProblemsSolvedByActiveUsersOnDate,
+    getWeeklyUnsolve,
 } from "./solved.mjs";
 import {
     checkDiscordIdExists,
@@ -26,11 +27,14 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+let UpdateCooltime = new Date();
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const EmbedFooterImageUrl =
     "https://cdn.discordapp.com/avatars/1305799574774087691/e5c81e2ac05a6892de19d5e4e479dda4";
-const EmbedFooterText = "모든 정보는 오후 6시 30분과 새벽 6시 30분에 업데이트됩니다.";
+const EmbedFooterText =
+    "모든 정보는 오후 6시 30분과 새벽 6시 30분에 업데이트됩니다.";
 
 // 봇이 준비되었을 때 실행할 코드
 client.once("ready", () => {
@@ -65,7 +69,9 @@ client.once("ready", () => {
         const channel = await client.channels.fetch(channelId);
         let problems;
         try {
-            problems = await getProblemsSolvedByActiveUsersOnDate(formattedDate);
+            problems = await getProblemsSolvedByActiveUsersOnDate(
+                formattedDate
+            );
         } catch (error) {
             console.error(
                 "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
@@ -80,36 +86,38 @@ client.once("ready", () => {
         );
 
         for (const [user_id, user_problems] of Object.entries(sortedProblems)) {
-
             const user = await getUserById(user_id);
             let embed;
             const tierInfo = tierMapping[user.tier];
             const filteredProblems = user_problems.filter(
                 (problemHolder) => problemHolder.problem.level >= tierInfo.limit
-            )
+            );
             if (filteredProblems.length > 0) {
                 embed = new EmbedBuilder()
-                    .setColor(0xADFF2F)
-                    .setTitle(`${user.handle}님이 ${formattedDate}의 문제를 풀었습니다.`)
+                    .setColor(0xadff2f)
+                    .setTitle(
+                        `${user.handle}님이 ${formattedDate}의 문제를 풀었습니다.`
+                    )
                     .setDescription(
-                        `오늘 푼 문제 수: ${user_problems.length
-                        }, 조건에 맞는 문제 수: ${filteredProblems.length
-                        }`
+                        `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
                     )
                     .setFooter({
                         text: EmbedFooterText,
                         iconURL: EmbedFooterImageUrl,
                     });
-            }
-            else {
+            } else {
                 embed = new EmbedBuilder()
                     .setColor(0xff0000)
-                    .setTitle(`${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`)
+                    .setTitle(
+                        `${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`
+                    )
                     .setDescription(
-                        `오늘 푼 문제 수: ${user_problems.length
-                        }, 조건에 맞는 문제 수: ${user_problems.filter(
-                            (problem) => problem.level >= tierInfo.limit
-                        ).length
+                        `오늘 푼 문제 수: ${
+                            user_problems.length
+                        }, 조건에 맞는 문제 수: ${
+                            user_problems.filter(
+                                (problem) => problem.level >= tierInfo.limit
+                            ).length
                         }`
                     )
                     .setFooter({
@@ -125,9 +133,13 @@ client.once("ready", () => {
                 // 채널에 embed 메시지 전송
                 await channel.send({ embeds: [embed] });
 
-                console.log(`ANNOUNCEMENT_CHANNEL_ID(${channelId}) 채널로 메시지가 성공적으로 전송되었습니다.`);
+                console.log(
+                    `ANNOUNCEMENT_CHANNEL_ID(${channelId}) 채널로 메시지가 성공적으로 전송되었습니다.`
+                );
             } catch (error) {
-                console.error(`메시지를 보내는 도중 오류가 발생했습니다: ${error}`);
+                console.error(
+                    `메시지를 보내는 도중 오류가 발생했습니다: ${error}`
+                );
             }
         }
     });
@@ -159,7 +171,9 @@ client.once("ready", () => {
         const channel = await client.channels.fetch(channelId);
         let problems;
         try {
-            problems = await getProblemsSolvedByActiveUsersOnDate(formattedDate);
+            problems = await getProblemsSolvedByActiveUsersOnDate(
+                formattedDate
+            );
         } catch (error) {
             console.error(
                 "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
@@ -169,10 +183,9 @@ client.once("ready", () => {
 
         console.log(problems);
         for (const [user_id, user_problems] of Object.entries(problems)) {
-
             const filteredProblems = user_problems.filter(
                 (problemHolder) => problemHolder.problem.level >= tierInfo.limit
-            )
+            );
             if (filteredProblems.length > 0) continue;
             const user = await getUserById(user_id);
 
@@ -181,9 +194,7 @@ client.once("ready", () => {
                 .setColor(0xff0000)
                 .setTitle(`아직 ${formattedDate}의 문제를 풀지 않았습니다.`)
                 .setDescription(
-                    `오늘 푼 문제 수: ${user_problems.length
-                    }, 조건에 맞는 문제 수: ${filteredProblems.length
-                    }`
+                    `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
                 )
                 .setFooter({
                     text: EmbedFooterText,
@@ -193,10 +204,70 @@ client.once("ready", () => {
             try {
                 const discordUser = await client.users.fetch(user.discord_id);
                 await discordUser.send({ embeds: [embed] });
-                console.log(`DM이 ${user.discord_id}에게 성공적으로 전송되었습니다.`);
+                console.log(
+                    `DM이 ${user.discord_id}에게 성공적으로 전송되었습니다.`
+                );
             } catch (error) {
                 console.error(`DM을 보내는 도중 오류가 발생했습니다: ${error}`);
             }
+        }
+    });
+
+    // 일요일 오전 6시마다 메시지 전송 (30 6 * * 1)
+    cron.schedule("28 23 * * *", async () => {
+        console.log("test");
+        //공지방에 벌금 목록 올리기
+        const channel = await client.channels.fetch(channelId);
+        const activeUsers = await getActiveUsers();
+        for (const user of activeUsers) {
+            const unsolved = await getWeeklyUnsolve(user.id, new Date());
+            const nickname = await getDiscordNickname(
+                channel.guild.id,
+                user.discord_id
+            );
+            let embed;
+            if (unsolved > 0) {
+                embed = new EmbedBuilder()
+                    .setColor(0xff0000)
+                    .setTitle(`${nickname}님의 이번 주 벌금`)
+                    .setDescription(`https://solved.ac/profile/${user.handle}`)
+                    .setThumbnail(user.profile_img)
+                    .addFields({
+                        name: "안 푼 문제 수",
+                        value: `${unsolved}개`,
+                        inline: true,
+                    })
+                    .addFields({
+                        name: "벌금",
+                        value: `${Math.pow(2, unsolved) * 1000}원`,
+                        inline: true,
+                    })
+                    .setFooter({
+                        text: EmbedFooterText,
+                        iconURL: EmbedFooterImageUrl,
+                    });
+            } else {
+                embed = new EmbedBuilder()
+                    .setColor(0x00ff00)
+                    .setTitle(`${nickname}님의 이번 주 벌금`)
+                    .setDescription(`https://solved.ac/profile/${user.handle}`)
+                    .setThumbnail(user.profile_img)
+                    .addFields({
+                        name: "안 푼 문제 수",
+                        value: `${unsolved}개`,
+                        inline: true,
+                    })
+                    .addFields({
+                        name: "벌금",
+                        value: "0원",
+                        inline: true,
+                    })
+                    .setFooter({
+                        text: EmbedFooterText,
+                        iconURL: EmbedFooterImageUrl,
+                    });
+            }
+            await channel.send({ embeds: [embed] });
         }
     });
 });
@@ -354,6 +425,134 @@ client.on("interactionCreate", async (interaction) => {
                     ephemeral: true,
                 });
             }
+        } else if (commandName === "벌금") {
+            if (!interaction.guild) {
+                await interaction.reply({
+                    content: "이 명령어는 서버에서만 사용할 수 있습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
+
+            try {
+                // 유저 존재여부 확인
+                if (await checkDiscordIdExists(interaction.user.id)) {
+                    const target_user =
+                        interaction.options.getUser("user") || interaction.user;
+
+                    // 사용자 정보 불러오기
+                    const user = await getUserByDiscordId(target_user.id);
+
+                    // 사용자 정보가 없을 경우
+                    if (!user) {
+                        await interaction.reply({
+                            content: "등록된 사용자 정보가 없습니다.",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+
+                    const unsolved = await getWeeklyUnsolve(
+                        user.id,
+                        new Date()
+                    );
+
+                    const nickname = await getDiscordNickname(
+                        interaction.guild.id,
+                        user.discord_id
+                    );
+
+                    let embed;
+                    if (unsolved > 0) {
+                        //벌금 안내 임베드 메시지 생성
+                        embed = new EmbedBuilder()
+                            .setColor(0xff0000) // 벌금을 나타내는 빨간색
+                            .setTitle(`${nickname}님의 이번 주 벌금`)
+                            .setDescription(
+                                `https://solved.ac/profile/${user.handle}`
+                            )
+                            .setThumbnail(user.profile_img) // 사용자 프로필 이미지
+                            .addFields({
+                                name: "안 푼 문제 수",
+                                value: `${unsolved}개`,
+                                inline: true,
+                            })
+                            .addFields({
+                                name: "벌금",
+                                value: `${Math.pow(2, unsolved) * 1000}원`,
+                                inline: true,
+                            })
+                            .setFooter({
+                                text: EmbedFooterText,
+                                iconURL: EmbedFooterImageUrl,
+                            });
+                    } else {
+                        //벌금 없음 안내 임베드 메시지 생성
+                        embed = new EmbedBuilder()
+                            .setColor(0x00ff00) // 벌금 없음을 나타내는 초록색
+                            .setTitle(`${nickname}님의 이번 주 벌금`)
+                            .setDescription(
+                                `https://solved.ac/profile/${user.handle}`
+                            )
+                            .setThumbnail(user.profile_img) // 사용자 프로필 이미지
+                            .addFields({
+                                name: "안 푼 문제 수",
+                                value: `${unsolved}개`,
+                                inline: true,
+                            })
+                            .addFields({
+                                name: "벌금",
+                                value: "0원",
+                                inline: true,
+                            })
+                            .setFooter({
+                                text: EmbedFooterText,
+                                iconURL: EmbedFooterImageUrl,
+                            });
+                    }
+                    // 임베드 메시지 전송
+                    await interaction.reply({ embeds: [embed] });
+                } else {
+                    await interaction.reply({
+                        content: "등록된 사용자 정보가 없습니다.",
+                        ephemeral: true,
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+                await interaction.reply({
+                    content: "사용자 정보를 불러오는 도중 문제가 발생했습니다.",
+                    ephemeral: true,
+                });
+            }
+        } else if (commandName === "강제갱신") {
+            if (!interaction.guild) {
+                await interaction.reply({
+                    content: "이 명령어는 서버에서만 사용할 수 있습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
+            //해당 명령어 쿨타임 1시간
+            const now = new Date();
+            if (now < UpdateCooltime) {
+                await interaction.reply({
+                    content: "강제 갱신은 1시간에 한 번만 할 수 있습니다.",
+                    ephemeral: true,
+                });
+            } else {
+                //유저 정보 갱신
+                updateUserDataForActiveUsers().then(() => {
+                    saveSolvedProblemsForActiveUsers();
+                });
+                //정보 갱신 요청을 보냈다고 알림
+                await interaction.reply({
+                    content: "유저 정보와 문제 정보 갱신 요청을 보냈습니다.",
+                    ephemeral: true,
+                });
+                now.setHours(now.getHours() + 1);
+                UpdateCooltime = now;
+            }
         }
     } else if (interaction.isModalSubmit()) {
         if (interaction.customId.startsWith("registerModal")) {
@@ -445,8 +644,6 @@ client.on("interactionCreate", async (interaction) => {
 
                 // 임베드 메시지 전송
                 await interaction.reply({ embeds: [embed] });
-
-
             } catch (error) {
                 console.error(error);
                 // 등록 실패 임베드 메시지 생성

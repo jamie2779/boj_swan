@@ -209,34 +209,52 @@ export async function getProblemsSolvedByActiveUsersOnDate(date) {
     return solvedProblems;
 }
 
-
 //특정 유저의 일주일 벌금 조회 함수
-//벌금은 일주일마다 초기회 되며, 월요일부터 일요일까지가 1주일이다, 벌금은 1회에 2000원, 2회에 4000원, 3회에 8000원 이런 식으로 2배씩 증가한다.
-export async function getWeeklyFine(user_id, targetDate) {
-    //targetDate가 포함된 주의 월요일과 일요일을 구한다.
-    const target = new Date(targetDate);
-    const day = target.getDay();
-    const diff = target.getDate() - day + (day == 0 ? -6 : 1);
-    const monday = new Date(target.setDate(diff));
+//targetDate가 포함된 주 부터 targetDate이전 까지의 벌금을 조회한다.
+//targetDate가 월요일이라면 지난주 벌금을 조회한다.
+export async function getWeeklyUnsolve(user_id, targetDate) {
+    let monday = new Date(targetDate);
+    monday.setHours(6, 0, 0, 0);
+    let day = monday.getDay(); // 일요일:0, 월요일:1, ..., 토요일:6
+
+    // 일주일이 월요일부터 시작한다고 가정하므로 요일을 조정합니다.
+    let adjustedDay = (day + 6) % 7; // 월요일:0, 화요일:1, ..., 일요일:6
+
+    if (adjustedDay === 0) {
+        // targetdate가 월요일인 경우 지난주 월요일을 반환
+        monday.setDate(monday.getDate() - 7);
+    } else {
+        // targetdate가 월요일이 아닌 경우 해당 주의 월요일을 반환
+        monday.setDate(monday.getDate() - adjustedDay);
+    }
+
+    let std = new Date();
+    std.setHours(6, 0, 0, 0);
 
     //유저 정보 조회
     const user = await getUserById(user_id);
+    const tierInfo = tierMapping[user.tier];
 
-
-    //월요일부터 일요일까지의 문제 해결 개수를 for문과 getProblemsSolvedByUserOnDate를 통해 구한다.
     try {
-        let solvedCount = 0;
+        let unsolved = 0;
         for (let i = 0; i < 7; i++) {
             const date = new Date(monday);
             date.setDate(monday.getDate() + i);
-            const problemsSolved = await getProblemsSolvedByUserOnDate(user_id, date);
-            const filteredProblems = user_problems.filter(
+            if (date < user.create_date) continue;
+            if (date > std) break;
+            const problemsSolved = await getProblemsSolvedByUserOnDate(
+                user_id,
+                date
+            );
+            const filteredProblems = problemsSolved.filter(
                 (problemHolder) => problemHolder.problem.level >= tierInfo.limit
-            )
-            solvedCount += problemsSolved.length;
+            );
+            console.log(filteredProblems.length);
+            if (filteredProblems.length == 0) {
+                unsolved += 1;
+            }
         }
-
-
+        return unsolved;
     } catch (error) {
         console.error("Error fetching weekly fine:", error.message);
         throw error;
