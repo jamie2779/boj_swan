@@ -240,7 +240,10 @@ export async function getWeeklyUnsolve(user_id, targetDate) {
         for (let i = 0; i < 7; i++) {
             const date = new Date(monday);
             date.setDate(monday.getDate() + i);
-            if (date < user.create_date) continue;
+            const userCreated = new Date(user.create_date);
+            userCreated.setHours(6, 0, 0, 0);
+
+            if (date <= userCreated) continue;
             if (date > std) break;
             const problemsSolved = await getProblemsSolvedByUserOnDate(
                 user_id,

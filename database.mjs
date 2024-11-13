@@ -237,12 +237,13 @@ export async function updateUser(user_id, data) {
 //특정 유저가 특정 날자에 해결한 문제들을 조회하는 함수
 export async function getProblemsSolvedByUserOnDate(user_id, targetDate) {
     try {
-        //targetDate의 시간이 새벽 6시 이전이라면 날짜 하나 전으로 돌리기
-        if (targetDate.getHours() < 6) {
-            targetDate.setDate(targetDate.getDate() - 1);
-        }
         const startDate = new Date(targetDate);
+        //targetDate의 시간이 새벽 6시 이전이라면 날짜 하나 전으로 돌리기
+        if (startDate.getHours() < 6) {
+            startDate.setDate(startDate.getDate() - 1);
+        }
         startDate.setHours(6, 0, 0, 0);
+        console.log(startDate);
 
         const endDate = new Date(targetDate);
         endDate.setDate(endDate.getDate() + 1);
