@@ -542,9 +542,18 @@ client.on("interactionCreate", async (interaction) => {
                 });
             } else {
                 //유저 정보 갱신
-                updateUserDataForActiveUsers().then(() => {
-                    saveSolvedProblemsForActiveUsers();
-                });
+                updateUserDataForActiveUsers()
+                    .then(() => {
+                        saveSolvedProblemsForActiveUsers().catch((error) => {
+                            console.error(
+                                "유저 문제 정보 갱신 중 오류 발생:",
+                                error
+                            );
+                        });
+                    })
+                    .catch((error) => {
+                        console.error("유저 정보 갱신 중 오류 발생:", error);
+                    });
                 //정보 갱신 요청을 보냈다고 알림
                 await interaction.reply({
                     content: "유저 정보와 문제 정보 갱신 요청을 보냈습니다.",
@@ -640,7 +649,9 @@ client.on("interactionCreate", async (interaction) => {
                         iconURL: EmbedFooterImageUrl,
                     });
                 //푼 문제 등록
-                saveSolvedProblems(user.id);
+                saveSolvedProblems(user.id).error((error) => {
+                    console.error("푼 문제 등록 중 오류 발생:", error);
+                });
 
                 // 임베드 메시지 전송
                 await interaction.reply({ embeds: [embed] });

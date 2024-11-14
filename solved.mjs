@@ -120,7 +120,6 @@ export async function saveSolvedProblems(user_id, initial = false) {
                 }
             } catch (error) {
                 console.error("Error creating problem holder:", error.message);
-                throw error;
             }
         }
     }
