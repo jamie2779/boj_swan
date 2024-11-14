@@ -649,7 +649,7 @@ client.on("interactionCreate", async (interaction) => {
                         iconURL: EmbedFooterImageUrl,
                     });
                 //푼 문제 등록
-                saveSolvedProblems(user.id).error((error) => {
+                saveSolvedProblems(user.id).catch((error) => {
                     console.error("푼 문제 등록 중 오류 발생:", error);
                 });
 

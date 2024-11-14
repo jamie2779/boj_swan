@@ -123,6 +123,7 @@ export async function saveSolvedProblems(user_id, initial = false) {
             }
         }
     }
+    console.log("new problems saved");
     return { problemCount, HolderCount };
 }
 
