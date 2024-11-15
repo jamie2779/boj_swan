@@ -43,7 +43,7 @@ client.once("ready", () => {
     // 특정 시간에 메시지를 보내는 스케줄러 설정
     const channelId = process.env.ANNOUNCEMENT_CHANNEL_ID; // 메시지를 보낼 채널의 ID를 입력하세요
 
-    cron.schedule("30 6 * * *", async () => {
+    cron.schedule("55 * * * *", async () => {
         //유저 정보 갱신
         try {
             await updateUserDataForActiveUsers();
@@ -57,6 +57,9 @@ client.once("ready", () => {
         } catch (error) {
             console.error("유저 문제 정보 갱신 중 오류 발생:", error);
         }
+    });
+
+    cron.schedule("30 6 * * *", async () => {
         const today = new Date();
         const year = today.getFullYear();
         const month = today.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
@@ -112,12 +115,10 @@ client.once("ready", () => {
                         `${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`
                     )
                     .setDescription(
-                        `오늘 푼 문제 수: ${
-                            user_problems.length
-                        }, 조건에 맞는 문제 수: ${
-                            user_problems.filter(
-                                (problem) => problem.level >= tierInfo.limit
-                            ).length
+                        `오늘 푼 문제 수: ${user_problems.length
+                        }, 조건에 맞는 문제 수: ${user_problems.filter(
+                            (problem) => problem.level >= tierInfo.limit
+                        ).length
                         }`
                     )
                     .setFooter({
@@ -146,19 +147,6 @@ client.once("ready", () => {
 
     // 매일 저녁 6시마다 메시지 전송 (0 18 * * *)
     cron.schedule("30 18 * * *", async () => {
-        //유저 정보 갱신
-        try {
-            await updateUserDataForActiveUsers();
-        } catch (error) {
-            console.error("유저 정보 갱신 중 오류 발생:", error);
-        }
-
-        //유저 문제 정보 갱신
-        try {
-            await saveSolvedProblemsForActiveUsers();
-        } catch (error) {
-            console.error("유저 문제 정보 갱신 중 오류 발생:", error);
-        }
         const today = new Date();
         const year = today.getFullYear();
         const month = today.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
