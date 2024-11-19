@@ -36,8 +36,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const EmbedFooterImageUrl =
     "https://cdn.discordapp.com/avatars/1305799574774087691/e5c81e2ac05a6892de19d5e4e479dda4";
-const EmbedFooterText =
-    "모든 정보는 오후 6시 30분과 새벽 6시 30분에 업데이트됩니다.";
+const EmbedFooterText = "유저 및 문제 정보는 매시 55분에 갱신됩니다.";
 
 // 봇이 준비되었을 때 실행할 코드
 client.once("ready", () => {
@@ -111,7 +110,7 @@ client.once("ready", () => {
             let embed;
             const tierInfo = tierMapping[user.tier];
             const filteredProblems = user_problems.filter(
-                (problemHolder) => problemHolder.problem.level >= tierInfo.limit
+                (problemHolder) => problemHolder.strick
             );
             if (filteredProblems.length > 0) {
                 embed = new EmbedBuilder()
@@ -133,13 +132,7 @@ client.once("ready", () => {
                         `${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`
                     )
                     .setDescription(
-                        `오늘 푼 문제 수: ${
-                            user_problems.length
-                        }, 조건에 맞는 문제 수: ${
-                            user_problems.filter(
-                                (problem) => problem.level >= tierInfo.limit
-                            ).length
-                        }`
+                        `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
                     )
                     .setFooter({
                         text: EmbedFooterText,
@@ -188,7 +181,7 @@ client.once("ready", () => {
 
         for (const [user_id, user_problems] of Object.entries(problems)) {
             const filteredProblems = user_problems.filter(
-                (problemHolder) => problemHolder.problem.level >= tierInfo.limit
+                (problemHolder) => problemHolder.strick
             );
             if (filteredProblems.length > 0) continue;
             const user = await getUserById(user_id);
@@ -545,24 +538,40 @@ client.on("interactionCreate", async (interaction) => {
                     ephemeral: true,
                 });
             } else {
-                //유저 정보 갱신
-                updateUserDataForActiveUsers()
-                    .then(() => {
-                        saveSolvedProblemsForActiveUsers().catch((error) => {
-                            console.error(
-                                "유저 문제 정보 갱신 중 오류 발생:",
-                                error
-                            );
-                        });
-                    })
-                    .catch((error) => {
-                        console.error("유저 정보 갱신 중 오류 발생:", error);
-                    });
                 //정보 갱신 요청을 보냈다고 알림
                 await interaction.reply({
                     content: "유저 정보와 문제 정보 갱신 요청을 보냈습니다.",
                     ephemeral: true,
                 });
+
+                //유저 정보 갱신
+                try {
+                    await updateUserDataForActiveUsers();
+                } catch (error) {
+                    console.error("유저 정보 갱신 중 오류 발생:", error);
+                    await interaction.editReply({
+                        content: `유저 정보 갱신 중 오류 발생: ${error}`,
+                        ephemeral: true,
+                    });
+                    return;
+                }
+
+                //유저 문제 정보 갱신
+                try {
+                    await saveSolvedProblemsForActiveUsers();
+                } catch (error) {
+                    console.error("문제 정보 갱신 중 오류 발생:", error);
+                    await interaction.editReply({
+                        content: `문제 정보 갱신 중 오류 발생: ${error}`,
+                        ephemeral: true,
+                    });
+                    return;
+                }
+                await interaction.editReply({
+                    content: `유저 정보와 문제 정보 갱신이 완료되었습니다.`,
+                    ephemeral: true,
+                });
+
                 now.setHours(now.getHours() + 1);
                 updateCooltime = now;
             }
@@ -576,11 +585,13 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             try {
+                await interaction.deferReply();
+
                 //해당 명령어 쿨타임 5분
                 const now = new Date();
                 if (strickCooltime[interaction.user.id]) {
                     if (now < strickCooltime[interaction.user.id]) {
-                        await interaction.reply({
+                        await interaction.editReply({
                             content:
                                 "스트릭 명령어는 5분에에 한 번만 사용 할 수 있습니다.",
                             ephemeral: true,
@@ -599,7 +610,7 @@ client.on("interactionCreate", async (interaction) => {
 
                     // 사용자 정보가 없을 경우
                     if (!user) {
-                        await interaction.reply({
+                        await interaction.editReply({
                             content: "등록된 사용자 정보가 없습니다.",
                             ephemeral: true,
                         });
@@ -612,7 +623,7 @@ client.on("interactionCreate", async (interaction) => {
                     if (dateInput) {
                         //입력된 날짜가 new Date()로 변환 가능한지 확인
                         if (isNaN(new Date(`${dateInput}`))) {
-                            await interaction.reply({
+                            await interaction.editReply({
                                 content:
                                     "날짜 형식이 잘못되었습니다.(YYYY-MM-DD)",
                                 ephemeral: true,
@@ -624,7 +635,7 @@ client.on("interactionCreate", async (interaction) => {
                             targetDate = new Date(`${dateInput}`);
                         } catch (error) {
                             console.error("날짜 변환 중 오류 발생:", error);
-                            await interaction.reply({
+                            await interaction.editReply({
                                 content: "날짜 변환 중 오류가 발생했습니다.",
                                 ephemeral: true,
                             });
@@ -677,8 +688,7 @@ client.on("interactionCreate", async (interaction) => {
                     let embed;
                     const tierInfo = tierMapping[user.tier];
                     const filteredProblems = user_problems.filter(
-                        (problemHolder) =>
-                            problemHolder.problem.level >= tierInfo.limit
+                        (problemHolder) => problemHolder.strick
                     );
                     if (filteredProblems.length > 0) {
                         embed = new EmbedBuilder()
@@ -700,14 +710,7 @@ client.on("interactionCreate", async (interaction) => {
                                 `${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`
                             )
                             .setDescription(
-                                `푼 문제 수: ${
-                                    user_problems.length
-                                }, 조건에 맞는 문제 수: ${
-                                    user_problems.filter(
-                                        (problem) =>
-                                            problem.level >= tierInfo.limit
-                                    ).length
-                                }`
+                                `푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
                             )
                             .setFooter({
                                 text: EmbedFooterText,
@@ -715,7 +718,7 @@ client.on("interactionCreate", async (interaction) => {
                             });
                     }
 
-                    await interaction.reply({
+                    await interaction.editReply({
                         embeds: [embed],
                     });
 
@@ -723,7 +726,7 @@ client.on("interactionCreate", async (interaction) => {
                     now.setMinutes(now.getMinutes() + 5);
                     strickCooltime[interaction.user.id] = now;
                 } else {
-                    await interaction.reply({
+                    await interaction.editReply({
                         content: "등록된 사용자 정보가 없습니다.",
                         ephemeral: true,
                     });

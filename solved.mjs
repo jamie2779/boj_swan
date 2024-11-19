@@ -105,17 +105,21 @@ export async function saveSolvedProblems(user_id, initial = false) {
             (holder) => holder.problem_id === problem.problemId
         );
         if (!holderExists) {
+            const tierInfo = tierMapping[user.tier];
+            const strick = problem.level >= tierInfo.limit;
             try {
                 if (initial) {
                     await createInitialProblemHolder({
                         user_id: user.id,
                         problem_id: problem.problemId,
+                        strick: strick,
                     });
                     HolderCount++;
                 } else {
                     await createProblemHolder({
                         user_id: user.id,
                         problem_id: problem.problemId,
+                        strick: strick,
                     });
                     HolderCount++;
                 }

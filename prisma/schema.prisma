@@ -36,6 +36,7 @@ model ProblemHolder {
   id          Int      @id @default(autoincrement())
   problem_id  Int
   user_id     Int
+  strick      Boolean  @default(false)
   create_date DateTime @default(now())
 
   problem Problem @relation(fields: [problem_id], references: [id], onDelete: Cascade)

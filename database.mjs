@@ -151,12 +151,17 @@ export async function getProblem(problem_id) {
 }
 
 //문제 홀더 등록 함수
-export async function createProblemHolder({ user_id, problem_id }) {
+export async function createProblemHolder({
+    user_id,
+    problem_id,
+    strick = false,
+}) {
     try {
         const newProblemHolder = await prisma.problemHolder.create({
             data: {
                 user_id: user_id,
                 problem_id: problem_id,
+                strick: strick,
             },
         });
 
@@ -169,7 +174,11 @@ export async function createProblemHolder({ user_id, problem_id }) {
 }
 
 //초기 문제 홀더 등록 함수
-export async function createInitialProblemHolder({ user_id, problem_id }) {
+export async function createInitialProblemHolder({
+    user_id,
+    problem_id,
+    strick = false,
+}) {
     try {
         const date = new Date(); // 현재 날짜
         date.setDate(date.getDate() - 3); // 3일 전으로 설정
@@ -177,6 +186,7 @@ export async function createInitialProblemHolder({ user_id, problem_id }) {
             data: {
                 user_id: user_id,
                 problem_id: problem_id,
+                strick: strick,
                 create_date: date,
             },
         });
