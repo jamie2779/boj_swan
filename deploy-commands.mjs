@@ -15,15 +15,28 @@ const commands = [
         .addMentionableOption((option) =>
             option.setName("user").setDescription("유저를 선택하세요.")
         ),
-    new SlashCommandBuilder()
-        .setName("벌금")
-        .setDescription("본인 / 특정 유저의 이번 주 벌금을 확인합니다.")
-        .addMentionableOption((option) =>
-            option.setName("user").setDescription("유저를 선택하세요.")
-        ),
+    // new SlashCommandBuilder()
+    //     .setName("벌금")
+    //     .setDescription("본인 / 특정 유저의 이번 주 벌금을 확인합니다.")
+    //     .addMentionableOption((option) =>
+    //         option.setName("user").setDescription("유저를 선택하세요.")
+    //     ),
     new SlashCommandBuilder()
         .setName("강제갱신")
-        .setDescription("유저 정보와 문제 정보를 강제로 갱신합니다"),
+        .setDescription(
+            "유저 정보와 문제 정보를 강제로 갱신합니다 (쿨타임 1시간)"
+        ),
+    new SlashCommandBuilder()
+        .setName("스트릭")
+        .setDescription(
+            "특정 날짜의 스트릭을 채웠는지 확인합니다. (쿨타임 5분)"
+        )
+        .addMentionableOption((option) =>
+            option.setName("user").setDescription("유저를 선택하세요.")
+        )
+        .addStringOption((option) =>
+            option.setName("date").setDescription("날짜를 입력하세요.")
+        ),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(

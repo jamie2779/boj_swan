@@ -100,6 +100,7 @@ export async function saveSolvedProblems(user_id, initial = false) {
                 throw error;
             }
         }
+
         const holderExists = holders.some(
             (holder) => holder.problem_id === problem.problemId
         );
@@ -252,7 +253,6 @@ export async function getWeeklyUnsolve(user_id, targetDate) {
             const filteredProblems = problemsSolved.filter(
                 (problemHolder) => problemHolder.problem.level >= tierInfo.limit
             );
-            console.log(filteredProblems.length);
             if (filteredProblems.length == 0) {
                 unsolved += 1;
             }

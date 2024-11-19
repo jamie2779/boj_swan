@@ -243,7 +243,6 @@ export async function getProblemsSolvedByUserOnDate(user_id, targetDate) {
             startDate.setDate(startDate.getDate() - 1);
         }
         startDate.setHours(6, 0, 0, 0);
-        console.log(startDate);
 
         const endDate = new Date(targetDate);
         endDate.setDate(endDate.getDate() + 1);
