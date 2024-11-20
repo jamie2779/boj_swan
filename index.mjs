@@ -196,64 +196,6 @@ client.once("ready", () => {
             }
         }
     });
-
-    // 일요일 오전 6시마다 메시지 전송 (30 6 * * 1)
-    // cron.schedule("28 23 * * *", async () => {
-    //     console.log("test");
-    //     //공지방에 벌금 목록 올리기
-    //     const channel = await client.channels.fetch(channelId);
-    //     const activeUsers = await getActiveUsers();
-    //     for (const user of activeUsers) {
-    //         const unsolved = await getWeeklyUnsolve(user.id, new Date());
-    //         const nickname = await getDiscordNickname(
-    //             channel.guild.id,
-    //             user.discord_id
-    //         );
-    //         let embed;
-    //         if (unsolved > 0) {
-    //             embed = new EmbedBuilder()
-    //                 .setColor(0xff0000)
-    //                 .setTitle(`${nickname}님의 이번 주 벌금`)
-    //                 .setDescription(`https://solved.ac/profile/${user.handle}`)
-    //                 .setThumbnail(user.profile_img)
-    //                 .addFields({
-    //                     name: "안 푼 문제 수",
-    //                     value: `${unsolved}개`,
-    //                     inline: true,
-    //                 })
-    //                 .addFields({
-    //                     name: "벌금",
-    //                     value: `${Math.pow(2, unsolved) * 1000}원`,
-    //                     inline: true,
-    //                 })
-    //                 .setFooter({
-    //                     text: EmbedFooterText,
-    //                     iconURL: EmbedFooterImageUrl,
-    //                 });
-    //         } else {
-    //             embed = new EmbedBuilder()
-    //                 .setColor(0x00ff00)
-    //                 .setTitle(`${nickname}님의 이번 주 벌금`)
-    //                 .setDescription(`https://solved.ac/profile/${user.handle}`)
-    //                 .setThumbnail(user.profile_img)
-    //                 .addFields({
-    //                     name: "안 푼 문제 수",
-    //                     value: `${unsolved}개`,
-    //                     inline: true,
-    //                 })
-    //                 .addFields({
-    //                     name: "벌금",
-    //                     value: "0원",
-    //                     inline: true,
-    //                 })
-    //                 .setFooter({
-    //                     text: EmbedFooterText,
-    //                     iconURL: EmbedFooterImageUrl,
-    //                 });
-    //         }
-    //         await channel.send({ embeds: [embed] });
-    //     }
-    // });
 });
 
 // 슬래시 명령어 처리
