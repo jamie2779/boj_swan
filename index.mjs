@@ -795,24 +795,6 @@ client.on("interactionCreate", async (interaction) => {
                     while (targetDate.getDay() !== 1) {
                         targetDate.setDate(targetDate.getDate() - 1);
                     }
-                    console.log(targetDate);
-
-                    //유저 정보 갱신
-                    try {
-                        await updateUserData(user.id);
-                    } catch (error) {
-                        console.error("유저 정보 갱신 중 오류 발생:", error);
-                    }
-
-                    //유저 문제 정보 갱신
-                    try {
-                        await saveSolvedProblems(user.id);
-                    } catch (error) {
-                        console.error(
-                            "유저 문제 정보 갱신 중 오류 발생:",
-                            error
-                        );
-                    }
 
                     let records = "";
                     let strickCount = 0;
