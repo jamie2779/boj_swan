@@ -351,106 +351,6 @@ client.on("interactionCreate", async (interaction) => {
                     ephemeral: true,
                 });
             }
-        } else if (commandName === "벌금") {
-            if (!interaction.guild) {
-                await interaction.reply({
-                    content: "이 명령어는 서버에서만 사용할 수 있습니다.",
-                    ephemeral: true,
-                });
-                return;
-            }
-
-            try {
-                // 유저 존재여부 확인
-                if (await checkDiscordIdExists(interaction.user.id)) {
-                    const target_user =
-                        interaction.options.getUser("user") || interaction.user;
-
-                    // 사용자 정보 불러오기
-                    const user = await getUserByDiscordId(target_user.id);
-
-                    // 사용자 정보가 없을 경우
-                    if (!user) {
-                        await interaction.reply({
-                            content: "등록된 사용자 정보가 없습니다.",
-                            ephemeral: true,
-                        });
-                        return;
-                    }
-
-                    const unsolved = await getWeeklyUnsolve(
-                        user.id,
-                        new Date()
-                    );
-
-                    const nickname = await getDiscordNickname(
-                        interaction.guild.id,
-                        user.discord_id
-                    );
-
-                    let embed;
-                    if (unsolved > 0) {
-                        //벌금 안내 임베드 메시지 생성
-                        embed = new EmbedBuilder()
-                            .setColor(0xff0000) //빨간색
-                            .setTitle(`${nickname}님의 이번 주 벌금`)
-                            .setDescription(
-                                `https://solved.ac/profile/${user.handle}`
-                            )
-                            .setThumbnail(user.profile_img) // 사용자 프로필 이미지
-                            .addFields({
-                                name: "안 푼 문제 수",
-                                value: `${unsolved}개`,
-                                inline: true,
-                            })
-                            .addFields({
-                                name: "벌금",
-                                value: `${Math.pow(2, unsolved) * 1000}원`,
-                                inline: true,
-                            })
-                            .setFooter({
-                                text: EmbedFooterText,
-                                iconURL: EmbedFooterImageUrl,
-                            });
-                    } else {
-                        //벌금 없음 안내 임베드 메시지 생성
-                        embed = new EmbedBuilder()
-                            .setColor(0x00ff00) //초록색
-                            .setTitle(`${nickname}님의 이번 주 벌금`)
-                            .setDescription(
-                                `https://solved.ac/profile/${user.handle}`
-                            )
-                            .setThumbnail(user.profile_img) // 사용자 프로필 이미지
-                            .addFields({
-                                name: "안 푼 문제 수",
-                                value: `${unsolved}개`,
-                                inline: true,
-                            })
-                            .addFields({
-                                name: "벌금",
-                                value: "0원",
-                                inline: true,
-                            })
-                            .setFooter({
-                                text: EmbedFooterText,
-                                iconURL: EmbedFooterImageUrl,
-                            });
-                    }
-                    // 임베드 메시지 전송
-                    await interaction.reply({ embeds: [embed] });
-                } else {
-                    await interaction.reply({
-                        content: "등록된 사용자 정보가 없습니다.",
-                        ephemeral: true,
-                    });
-                }
-            } catch (error) {
-                console.error(error);
-                await interaction.reply({
-                    content: "사용자 정보를 불러오는 도중 문제가 발생했습니다.",
-                    ephemeral: true,
-                });
-            }
         } else if (commandName === "강제갱신") {
             if (!interaction.guild) {
                 await interaction.reply({
@@ -503,6 +403,171 @@ client.on("interactionCreate", async (interaction) => {
 
                 now.setHours(now.getHours() + 1);
                 updateCooltime = now;
+            }
+        } else if (commandName === "스트릭") {
+            if (!interaction.guild) {
+                await interaction.reply({
+                    content: "이 명령어는 서버에서만 사용할 수 있습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
+
+            try {
+                await interaction.deferReply();
+
+                //해당 명령어 쿨타임 5분
+                const now = new Date();
+                if (strickCooltime[interaction.user.id]) {
+                    if (now < strickCooltime[interaction.user.id]) {
+                        await interaction.editReply({
+                            content:
+                                "스트릭 명령어는 5분에에 한 번만 사용 할 수 있습니다.",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+                }
+
+                // 유저 존재여부 확인
+                if (await checkDiscordIdExists(interaction.user.id)) {
+                    const target_user =
+                        interaction.options.getUser("user") || interaction.user;
+
+                    // 사용자 정보 불러오기
+                    const user = await getUserByDiscordId(target_user.id);
+
+                    // 사용자 정보가 없을 경우
+                    if (!user) {
+                        await interaction.editReply({
+                            content: "등록된 사용자 정보가 없습니다.",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+
+                    const dateInput = interaction.options.getString("date");
+                    let targetDate;
+                    //targetdate가 null이면
+                    if (dateInput) {
+                        //입력된 날짜가 new Date()로 변환 가능한지 확인
+                        if (isNaN(new Date(`${dateInput}`))) {
+                            await interaction.editReply({
+                                content:
+                                    "날짜 형식이 잘못되었습니다.(YYYY-MM-DD)",
+                                ephemeral: true,
+                            });
+                            return;
+                        }
+
+                        try {
+                            targetDate = new Date(`${dateInput}`);
+                        } catch (error) {
+                            console.error("날짜 변환 중 오류 발생:", error);
+                            await interaction.editReply({
+                                content: "날짜 변환 중 오류가 발생했습니다.",
+                                ephemeral: true,
+                            });
+                            return;
+                        }
+                    } else {
+                        targetDate = new Date();
+                    }
+                    console.log(targetDate);
+
+                    //유저 정보 갱신
+                    try {
+                        await updateUserData(user.id);
+                    } catch (error) {
+                        console.error("유저 정보 갱신 중 오류 발생:", error);
+                    }
+
+                    //유저 문제 정보 갱신
+                    try {
+                        await saveSolvedProblems(user.id);
+                    } catch (error) {
+                        console.error(
+                            "유저 문제 정보 갱신 중 오류 발생:",
+                            error
+                        );
+                    }
+
+                    const year = targetDate.getFullYear();
+                    const month = targetDate.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
+                    let day = targetDate.getDate();
+                    if (targetDate.getHours() < 6) day -= 1;
+                    const formattedDate = `${year}-${String(month).padStart(
+                        2,
+                        "0"
+                    )}-${String(day).padStart(2, "0")}`;
+
+                    let user_problems;
+                    try {
+                        user_problems = await getProblemsSolvedByUserOnDate(
+                            user.id,
+                            targetDate
+                        );
+                    } catch (error) {
+                        console.error(
+                            "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
+                            error
+                        );
+                    }
+
+                    let embed;
+                    const tierInfo = tierMapping[user.tier];
+                    const filteredProblems = user_problems.filter(
+                        (problemHolder) => problemHolder.strick
+                    );
+                    if (filteredProblems.length > 0) {
+                        embed = new EmbedBuilder()
+                            .setColor(0xadff2f)
+                            .setTitle(
+                                `${user.handle}님이 ${formattedDate}의 문제를 풀었습니다.`
+                            )
+                            .setDescription(
+                                `푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
+                            )
+                            .setFooter({
+                                text: EmbedFooterText,
+                                iconURL: EmbedFooterImageUrl,
+                            });
+                    } else {
+                        embed = new EmbedBuilder()
+                            .setColor(0xff0000)
+                            .setTitle(
+                                `${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`
+                            )
+                            .setDescription(
+                                `푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
+                            )
+                            .setFooter({
+                                text: EmbedFooterText,
+                                iconURL: EmbedFooterImageUrl,
+                            });
+                    }
+
+                    await interaction.editReply({
+                        embeds: [embed],
+                    });
+
+                    //쿨타임 설정
+                    now.setMinutes(now.getMinutes() + 5);
+                    strickCooltime[interaction.user.id] = now;
+                } else {
+                    await interaction.editReply({
+                        content: "등록된 사용자 정보가 없습니다.",
+                        ephemeral: true,
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.error(error);
+                await interaction.reply({
+                    content: "스트릭 정보를 불러오는 도중 문제가 발생했습니다.",
+                    ephemeral: true,
+                });
+                return;
             }
         } else if (commandName === "스트릭") {
             if (!interaction.guild) {
