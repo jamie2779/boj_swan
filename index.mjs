@@ -734,6 +734,167 @@ client.on("interactionCreate", async (interaction) => {
                 });
                 return;
             }
+        } else if (commandName === "기록") {
+            if (!interaction.guild) {
+                await interaction.reply({
+                    content: "이 명령어는 서버에서만 사용할 수 있습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
+
+            try {
+                await interaction.deferReply();
+
+                // 유저 존재여부 확인
+                if (await checkDiscordIdExists(interaction.user.id)) {
+                    const target_user =
+                        interaction.options.getUser("user") || interaction.user;
+
+                    // 사용자 정보 불러오기
+                    const user = await getUserByDiscordId(target_user.id);
+
+                    // 사용자 정보가 없을 경우
+                    if (!user) {
+                        await interaction.editReply({
+                            content: "등록된 사용자 정보가 없습니다.",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+
+                    const dateInput = interaction.options.getString("date");
+                    let targetDate;
+                    //targetdate가 null이면
+                    if (dateInput) {
+                        //입력된 날짜가 new Date()로 변환 가능한지 확인
+                        if (isNaN(new Date(`${dateInput}`))) {
+                            await interaction.editReply({
+                                content:
+                                    "날짜 형식이 잘못되었습니다.(YYYY-MM-DD)",
+                                ephemeral: true,
+                            });
+                            return;
+                        }
+
+                        try {
+                            targetDate = new Date(`${dateInput}`);
+                        } catch (error) {
+                            console.error("날짜 변환 중 오류 발생:", error);
+                            await interaction.editReply({
+                                content: "날짜 변환 중 오류가 발생했습니다.",
+                                ephemeral: true,
+                            });
+                            return;
+                        }
+                    } else {
+                        targetDate = new Date();
+                    }
+                    targetDate.setHours(6, 30, 0, 0);
+                    targetDate.setDate(targetDate.getDate() - 1);
+                    while (targetDate.getDay() !== 1) {
+                        targetDate.setDate(targetDate.getDate() - 1);
+                    }
+                    console.log(targetDate);
+
+                    //유저 정보 갱신
+                    try {
+                        await updateUserData(user.id);
+                    } catch (error) {
+                        console.error("유저 정보 갱신 중 오류 발생:", error);
+                    }
+
+                    //유저 문제 정보 갱신
+                    try {
+                        await saveSolvedProblems(user.id);
+                    } catch (error) {
+                        console.error(
+                            "유저 문제 정보 갱신 중 오류 발생:",
+                            error
+                        );
+                    }
+
+                    let records = "";
+                    let strickCount = 0;
+                    let notStrickCount = 0;
+
+                    for (let i = 0; i < 7; i++) {
+                        const year = targetDate.getFullYear();
+                        const month = targetDate.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
+                        let day = targetDate.getDate();
+                        if (targetDate.getHours() < 6) day -= 1;
+                        const formattedDate = `${year}-${String(month).padStart(
+                            2,
+                            "0"
+                        )}-${String(day).padStart(2, "0")}`;
+
+                        if (targetDate >= new Date().setHours(6, 30, 0, 0)) {
+                            records += `:grey_question: ${formattedDate}\n `;
+                            targetDate.setDate(targetDate.getDate() + 1);
+                            continue;
+                        }
+
+                        let user_problems;
+                        try {
+                            user_problems = await getProblemsSolvedByUserOnDate(
+                                user.id,
+                                targetDate
+                            );
+                        } catch (error) {
+                            console.error(
+                                "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
+                                error
+                            );
+                        }
+
+                        const filteredProblems = user_problems.filter(
+                            (problemHolder) => problemHolder.strick
+                        );
+
+                        if (filteredProblems.length > 0) {
+                            records += `:white_check_mark: ${formattedDate} [${filteredProblems.length}문제/${user_problems.length}문제]\n `;
+                            strickCount++;
+                        } else {
+                            records += `:x: ${formattedDate} [${filteredProblems.length}문제/${user_problems.length}문제]\n `;
+                            notStrickCount++;
+                        }
+
+                        targetDate.setDate(targetDate.getDate() + 1);
+                    }
+
+                    const embed = new EmbedBuilder()
+                        .setColor(0xadff2f)
+                        .setTitle(`${user.handle}님의 스트릭 기록`)
+                        .setFields([
+                            {
+                                name: `성공: ${strickCount}일, 실패: ${notStrickCount}일`,
+                                value: records,
+                                inline: false,
+                            },
+                        ])
+                        .setFooter({
+                            text: EmbedFooterText,
+                            iconURL: EmbedFooterImageUrl,
+                        });
+
+                    await interaction.editReply({
+                        embeds: [embed],
+                    });
+                } else {
+                    await interaction.editReply({
+                        content: "등록된 사용자 정보가 없습니다.",
+                        ephemeral: true,
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.error(error);
+                await interaction.reply({
+                    content: "스트릭 정보를 불러오는 도중 문제가 발생했습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
         }
     } else if (interaction.isModalSubmit()) {
         if (interaction.customId.startsWith("registerModal")) {

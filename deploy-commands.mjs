@@ -37,6 +37,15 @@ const commands = [
         .addStringOption((option) =>
             option.setName("date").setDescription("날짜를 입력하세요.")
         ),
+    new SlashCommandBuilder()
+        .setName("기록")
+        .setDescription("특정 유저의 일주일 스트릭 기록을 봅니다.")
+        .addMentionableOption((option) =>
+            option.setName("user").setDescription("유저를 선택하세요.")
+        )
+        .addStringOption((option) =>
+            option.setName("date").setDescription("날짜를 입력하세요.")
+        ),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(
