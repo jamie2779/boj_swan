@@ -100,61 +100,49 @@ client.once("ready", () => {
             );
         }
 
-        //problems라는 object를 value의 길이 내림차순으로 정렬
-        const sortedProblems = Object.fromEntries(
-            Object.entries(problems).sort(([, a], [, b]) => b.length - a.length)
-        );
-
-        for (const [user_id, user_problems] of Object.entries(sortedProblems)) {
+        let stricks = "";
+        let strickCount = 0;
+        let notStrickCount = 0;
+        for (const [user_id, user_problems] of Object.entries(problems)) {
             const user = await getUserById(user_id);
-            let embed;
-            const tierInfo = tierMapping[user.tier];
             const filteredProblems = user_problems.filter(
                 (problemHolder) => problemHolder.strick
             );
             if (filteredProblems.length > 0) {
-                embed = new EmbedBuilder()
-                    .setColor(0xadff2f)
-                    .setTitle(
-                        `${user.handle}님이 ${formattedDate}의 문제를 풀었습니다.`
-                    )
-                    .setDescription(
-                        `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
-                    )
-                    .setFooter({
-                        text: EmbedFooterText,
-                        iconURL: EmbedFooterImageUrl,
-                    });
+                stricks += `:white_check_mark:  ${user.handle} [${filteredProblems.length}문제/${user_problems.length}문제]\n `;
+                strickCount++;
             } else {
-                embed = new EmbedBuilder()
-                    .setColor(0xff0000)
-                    .setTitle(
-                        `${user.handle}님이 ${formattedDate}의 문제를 풀지 않았습니다.`
-                    )
-                    .setDescription(
-                        `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
-                    )
-                    .setFooter({
-                        text: EmbedFooterText,
-                        iconURL: EmbedFooterImageUrl,
-                    });
+                stricks += `:x:  ${user.handle} [${filteredProblems.length}문제/${user_problems.length}문제]\n `;
+                notStrickCount++;
             }
+        }
+        const embed = new EmbedBuilder()
+            .setColor(0xadff2f)
+            .setTitle(`${formattedDate} 스트릭 목록`)
+            .addFields([
+                {
+                    name: `성공: ${strickCount}명, 실패: ${notStrickCount}명`,
+                    value: stricks,
+                    inline: false,
+                },
+            ])
+            .setFooter({
+                text: EmbedFooterText,
+                iconURL: EmbedFooterImageUrl,
+            });
 
-            try {
-                // 지정된 채널 ID로 채널 객체 가져오기
-                const channel = await client.channels.fetch(channelId);
+        try {
+            // 지정된 채널 ID로 채널 객체 가져오기
+            const channel = await client.channels.fetch(channelId);
 
-                // 채널에 embed 메시지 전송
-                await channel.send({ embeds: [embed] });
+            // 채널에 embed 메시지 전송
+            await channel.send({ embeds: [embed] });
 
-                console.log(
-                    `ANNOUNCEMENT_CHANNEL_ID(${channelId}) 채널로 메시지가 성공적으로 전송되었습니다.`
-                );
-            } catch (error) {
-                console.error(
-                    `메시지를 보내는 도중 오류가 발생했습니다: ${error}`
-                );
-            }
+            console.log(
+                `ANNOUNCEMENT_CHANNEL_ID(${channelId}) 채널로 메시지가 성공적으로 전송되었습니다.`
+            );
+        } catch (error) {
+            console.error(`메시지를 보내는 도중 오류가 발생했습니다: ${error}`);
         }
     });
 
@@ -186,7 +174,6 @@ client.once("ready", () => {
             if (filteredProblems.length > 0) continue;
             const user = await getUserById(user_id);
 
-            const tierInfo = tierMapping[user.tier];
             const embed = new EmbedBuilder()
                 .setColor(0xff0000)
                 .setTitle(`아직 ${formattedDate}의 문제를 풀지 않았습니다.`)
