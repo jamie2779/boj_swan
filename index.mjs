@@ -473,7 +473,6 @@ client.on("interactionCreate", async (interaction) => {
                     } else {
                         targetDate = new Date();
                     }
-                    console.log(targetDate);
 
                     //유저 정보 갱신
                     try {
@@ -638,7 +637,6 @@ client.on("interactionCreate", async (interaction) => {
                     } else {
                         targetDate = new Date();
                     }
-                    console.log(targetDate);
 
                     //유저 정보 갱신
                     try {
