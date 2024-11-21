@@ -15,7 +15,6 @@ import {
     updateUserDataForActiveUsers,
     saveSolvedProblemsForActiveUsers,
     getProblemsSolvedByActiveUsersOnDate,
-    getWeeklyUnsolve,
     updateUserData,
 } from "./solved.mjs";
 import {
@@ -24,6 +23,7 @@ import {
     getUserById,
     getUserByDiscordId,
     getProblemsSolvedByUserOnDate,
+    getActiveUsers,
 } from "./database.mjs";
 import dotenv from "dotenv";
 
@@ -37,6 +37,17 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const EmbedFooterImageUrl =
     "https://cdn.discordapp.com/avatars/1305799574774087691/e5c81e2ac05a6892de19d5e4e479dda4";
 const EmbedFooterText = "유저 및 문제 정보는 매시 55분에 갱신됩니다.";
+
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    let day = date.getDate();
+    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
+        day
+    ).padStart(2, "0")}`;
+
+    return formattedDate;
+}
 
 // 봇이 준비되었을 때 실행할 코드
 client.once("ready", () => {
@@ -803,7 +814,6 @@ client.on("interactionCreate", async (interaction) => {
                         const year = targetDate.getFullYear();
                         const month = targetDate.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
                         let day = targetDate.getDate();
-                        if (targetDate.getHours() < 6) day -= 1;
                         const formattedDate = `${year}-${String(month).padStart(
                             2,
                             "0"
@@ -884,6 +894,140 @@ client.on("interactionCreate", async (interaction) => {
             } catch (error) {
                 console.error(error);
                 await interaction.reply({
+                    content: "스트릭 정보를 불러오는 도중 문제가 발생했습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
+        } else if (commandName === "벌금") {
+            if (!interaction.guild) {
+                await interaction.reply({
+                    content: "이 명령어는 서버에서만 사용할 수 있습니다.",
+                    ephemeral: true,
+                });
+                return;
+            }
+            await interaction.deferReply();
+
+            try {
+                const dateInput = interaction.options.getString("date");
+                let targetDate;
+                //targetdate가 null이면
+                if (dateInput) {
+                    //입력된 날짜가 new Date()로 변환 가능한지 확인
+                    if (isNaN(new Date(`${dateInput}`))) {
+                        await interaction.editReply({
+                            content: "날짜 형식이 잘못되었습니다.(YYYY-MM-DD)",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+
+                    try {
+                        targetDate = new Date(`${dateInput}`);
+                    } catch (error) {
+                        console.error("날짜 변환 중 오류 발생:", error);
+                        await interaction.editReply({
+                            content: "날짜 변환 중 오류가 발생했습니다.",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+                } else {
+                    targetDate = new Date();
+                }
+
+                targetDate.setHours(6, 30, 0, 0);
+                targetDate.setDate(targetDate.getDate() - 1);
+                while (targetDate.getDay() !== 1) {
+                    targetDate.setDate(targetDate.getDate() - 1);
+                }
+
+                const users = await getActiveUsers();
+                let records = "";
+                let total = 0;
+                let count = 0;
+                for (const user of users) {
+                    let notStrickCount = 0;
+                    let repeatDate = new Date(targetDate);
+                    for (let i = 0; i < 7; i++) {
+                        const createDate = new Date(user.create_date);
+                        if (createDate.getHours() >= 6)
+                            createDate.setDate(createDate.getDate() + 1);
+                        createDate.setHours(6, 30, 0, 0);
+                        const nowDate = new Date();
+                        if (nowDate.getHours() < 6)
+                            nowDate.setDate(nowDate.getDate() - 1);
+                        nowDate.setHours(6, 30, 0, 0);
+
+                        if (repeatDate >= nowDate || repeatDate <= createDate) {
+                            repeatDate.setDate(repeatDate.getDate() + 1);
+                            continue;
+                        }
+
+                        let user_problems;
+                        try {
+                            user_problems = await getProblemsSolvedByUserOnDate(
+                                user.id,
+                                repeatDate
+                            );
+                        } catch (error) {
+                            console.error(
+                                "특정 날짜에 해결한 문제들을 불러오는 도중 오류가 발생했습니다:",
+                                error
+                            );
+                        }
+
+                        const filteredProblems = user_problems.filter(
+                            (problemHolder) => problemHolder.strick
+                        );
+
+                        if (filteredProblems.length == 0) {
+                            notStrickCount++;
+                        }
+
+                        repeatDate.setDate(repeatDate.getDate() + 1);
+                    }
+
+                    if (notStrickCount > 0) {
+                        records += `:x: ${user.handle} - ${
+                            Math.pow(2, notStrickCount) * 1100
+                        }원\n`;
+                        total += Math.pow(2, notStrickCount) * 1100;
+                        count++;
+                    } else {
+                        records += `:white_check_mark: ${user.handle} - 0원\n`;
+                    }
+                }
+
+                //시작날짜
+                const startDate = formatDate(targetDate);
+
+                //종료날짜
+                targetDate.setDate(targetDate.getDate() + 6);
+                const endDate = formatDate(targetDate);
+
+                const embed = new EmbedBuilder()
+                    .setColor(0xadff2f)
+                    .setTitle(`${startDate} ~ ${endDate} 벌금`)
+                    .setFields([
+                        {
+                            name: `인원 : ${count}명, 합계 : ${total}원`,
+                            value: records,
+                            inline: false,
+                        },
+                    ])
+                    .setFooter({
+                        text: EmbedFooterText,
+                        iconURL: EmbedFooterImageUrl,
+                    });
+
+                await interaction.editReply({
+                    embeds: [embed],
+                });
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply({
                     content: "스트릭 정보를 불러오는 도중 문제가 발생했습니다.",
                     ephemeral: true,
                 });

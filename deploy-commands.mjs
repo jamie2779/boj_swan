@@ -15,12 +15,12 @@ const commands = [
         .addMentionableOption((option) =>
             option.setName("user").setDescription("유저를 선택하세요.")
         ),
-    // new SlashCommandBuilder()
-    //     .setName("벌금")
-    //     .setDescription("본인 / 특정 유저의 이번 주 벌금을 확인합니다.")
-    //     .addMentionableOption((option) =>
-    //         option.setName("user").setDescription("유저를 선택하세요.")
-    //     ),
+    new SlashCommandBuilder()
+        .setName("벌금")
+        .setDescription("모든 유저의 일주일 벌금을 확인합니다.")
+        .addStringOption((option) =>
+            option.setName("date").setDescription("날짜를 입력하세요.")
+        ),
     new SlashCommandBuilder()
         .setName("강제갱신")
         .setDescription(
