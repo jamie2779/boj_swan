@@ -46,35 +46,35 @@ client.once("ready", () => {
     const channelId = process.env.ANNOUNCEMENT_CHANNEL_ID; // 메시지를 보낼 채널의 ID를 입력하세요
 
     cron.schedule("55 * * * *", async () => {
-        //유저 정보 갱신
-        try {
-            await updateUserDataForActiveUsers();
-        } catch (error) {
-            console.error("유저 정보 갱신 중 오류 발생:", error);
-        }
-
         //유저 문제 정보 갱신
         try {
             await saveSolvedProblemsForActiveUsers();
         } catch (error) {
             console.error("유저 문제 정보 갱신 중 오류 발생:", error);
+        }
+
+        //유저 정보 갱신
+        try {
+            await updateUserDataForActiveUsers();
+        } catch (error) {
+            console.error("유저 정보 갱신 중 오류 발생:", error);
         }
     });
 
     //매일 새벽 6시 30분 마다 메시지 전송 (30 6 * * *)
     cron.schedule("30 6 * * *", async () => {
-        //유저 정보 갱신
-        try {
-            await updateUserDataForActiveUsers();
-        } catch (error) {
-            console.error("유저 정보 갱신 중 오류 발생:", error);
-        }
-
         //유저 문제 정보 갱신
         try {
             await saveSolvedProblemsForActiveUsers();
         } catch (error) {
             console.error("유저 문제 정보 갱신 중 오류 발생:", error);
+        }
+
+        //유저 정보 갱신
+        try {
+            await updateUserDataForActiveUsers();
+        } catch (error) {
+            console.error("유저 정보 갱신 중 오류 발생:", error);
         }
     });
 
@@ -373,6 +373,18 @@ client.on("interactionCreate", async (interaction) => {
                     ephemeral: true,
                 });
 
+                //유저 문제 정보 갱신
+                try {
+                    await saveSolvedProblemsForActiveUsers();
+                } catch (error) {
+                    console.error("문제 정보 갱신 중 오류 발생:", error);
+                    await interaction.editReply({
+                        content: `문제 정보 갱신 중 오류 발생: ${error}`,
+                        ephemeral: true,
+                    });
+                    return;
+                }
+
                 //유저 정보 갱신
                 try {
                     await updateUserDataForActiveUsers();
@@ -385,17 +397,6 @@ client.on("interactionCreate", async (interaction) => {
                     return;
                 }
 
-                //유저 문제 정보 갱신
-                try {
-                    await saveSolvedProblemsForActiveUsers();
-                } catch (error) {
-                    console.error("문제 정보 갱신 중 오류 발생:", error);
-                    await interaction.editReply({
-                        content: `문제 정보 갱신 중 오류 발생: ${error}`,
-                        ephemeral: true,
-                    });
-                    return;
-                }
                 await interaction.editReply({
                     content: `유저 정보와 문제 정보 갱신이 완료되었습니다.`,
                     ephemeral: true,
@@ -474,13 +475,6 @@ client.on("interactionCreate", async (interaction) => {
                         targetDate = new Date();
                     }
 
-                    //유저 정보 갱신
-                    try {
-                        await updateUserData(user.id);
-                    } catch (error) {
-                        console.error("유저 정보 갱신 중 오류 발생:", error);
-                    }
-
                     //유저 문제 정보 갱신
                     try {
                         await saveSolvedProblems(user.id);
@@ -489,6 +483,13 @@ client.on("interactionCreate", async (interaction) => {
                             "유저 문제 정보 갱신 중 오류 발생:",
                             error
                         );
+                    }
+
+                    //유저 정보 갱신
+                    try {
+                        await updateUserData(user.id);
+                    } catch (error) {
+                        console.error("유저 정보 갱신 중 오류 발생:", error);
                     }
 
                     const year = targetDate.getFullYear();
@@ -638,13 +639,6 @@ client.on("interactionCreate", async (interaction) => {
                         targetDate = new Date();
                     }
 
-                    //유저 정보 갱신
-                    try {
-                        await updateUserData(user.id);
-                    } catch (error) {
-                        console.error("유저 정보 갱신 중 오류 발생:", error);
-                    }
-
                     //유저 문제 정보 갱신
                     try {
                         await saveSolvedProblems(user.id);
@@ -653,6 +647,13 @@ client.on("interactionCreate", async (interaction) => {
                             "유저 문제 정보 갱신 중 오류 발생:",
                             error
                         );
+                    }
+
+                    //유저 정보 갱신
+                    try {
+                        await updateUserData(user.id);
+                    } catch (error) {
+                        console.error("유저 정보 갱신 중 오류 발생:", error);
                     }
 
                     const year = targetDate.getFullYear();
