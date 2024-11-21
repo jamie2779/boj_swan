@@ -809,7 +809,16 @@ client.on("interactionCreate", async (interaction) => {
                             "0"
                         )}-${String(day).padStart(2, "0")}`;
 
-                        if (targetDate >= new Date().setHours(6, 30, 0, 0)) {
+                        const createDate = new Date(user.create_date);
+                        if (createDate.getHours() >= 6)
+                            createDate.setDate(createDate.getDate() + 1);
+                        createDate.setHours(6, 30, 0, 0);
+                        const nowDate = new Date();
+                        if (nowDate.getHours() < 6)
+                            nowDate.setDate(nowDate.getDate() - 1);
+                        nowDate.setHours(6, 30, 0, 0);
+
+                        if (targetDate >= nowDate || targetDate <= createDate) {
                             records += `:grey_question: ${formattedDate}\n `;
                             targetDate.setDate(targetDate.getDate() + 1);
                             continue;
@@ -848,7 +857,11 @@ client.on("interactionCreate", async (interaction) => {
                         .setTitle(`${user.handle}님의 스트릭 기록`)
                         .setFields([
                             {
-                                name: `성공: ${strickCount}일, 실패: ${notStrickCount}일`,
+                                name: `성공: ${strickCount}일, 실패: ${notStrickCount}일, 벌금 : ${
+                                    notStrickCount === 0
+                                        ? 0
+                                        : Math.pow(2, notStrickCount) * 1100
+                                }원`,
                                 value: records,
                                 inline: false,
                             },
