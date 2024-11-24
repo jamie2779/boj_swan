@@ -8,6 +8,7 @@ import {
     TextInputStyle,
     ActionRowBuilder,
     EmbedBuilder,
+    StringSelectMenuBuilder,
 } from "discord.js";
 import {
     getSolvedUserData,
@@ -24,6 +25,7 @@ import {
     getUserByDiscordId,
     getProblemsSolvedByUserOnDate,
     getActiveUsers,
+    updateUser,
 } from "./database.mjs";
 import dotenv from "dotenv";
 
@@ -72,8 +74,8 @@ client.once("ready", () => {
         }
     });
 
-    //매일 새벽 6시 30분 마다 메시지 전송 (30 6 * * *)
-    cron.schedule("30 6 * * *", async () => {
+    //초기와 직전 문제 갱신
+    cron.schedule("59 5 * * *", async () => {
         //유저 문제 정보 갱신
         try {
             await saveSolvedProblemsForActiveUsers();
@@ -89,6 +91,7 @@ client.once("ready", () => {
         }
     });
 
+    //매일 새벽 6시 30분 마다 메시지 전송 (30 6 * * *)
     cron.schedule("30 6 * * *", async () => {
         const today = new Date();
         today.setHours(5, 59, 59, 0);
@@ -157,8 +160,8 @@ client.once("ready", () => {
         }
     });
 
-    // 매일 저녁 6시 30분 마다 메시지 전송 (30 18 * * *)
-    cron.schedule("30 18 * * *", async () => {
+    // 정해진 시간에 알림 메시지 전송 매시 30분 설정 (30 * * * *)
+    cron.schedule("30 * * * *", async () => {
         const today = new Date();
         const year = today.getFullYear();
         const month = today.getMonth() + 1; // getMonth()는 0부터 시작하므로 1을 더해줍니다.
@@ -179,31 +182,38 @@ client.once("ready", () => {
         }
 
         for (const [user_id, user_problems] of Object.entries(problems)) {
-            const filteredProblems = user_problems.filter(
-                (problemHolder) => problemHolder.strick
-            );
-            if (filteredProblems.length > 0) continue;
             const user = await getUserById(user_id);
-
-            const embed = new EmbedBuilder()
-                .setColor(0xff0000)
-                .setTitle(`아직 ${formattedDate}의 문제를 풀지 않았습니다.`)
-                .setDescription(
-                    `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
-                )
-                .setFooter({
-                    text: EmbedFooterText,
-                    iconURL: EmbedFooterImageUrl,
-                });
-
-            try {
-                const discordUser = await client.users.fetch(user.discord_id);
-                await discordUser.send({ embeds: [embed] });
-                console.log(
-                    `DM이 ${user.discord_id}에게 성공적으로 전송되었습니다.`
+            const now = new Date();
+            if (now.getHours() === user.notice_time) {
+                const filteredProblems = user_problems.filter(
+                    (problemHolder) => problemHolder.strick
                 );
-            } catch (error) {
-                console.error(`DM을 보내는 도중 오류가 발생했습니다: ${error}`);
+                if (filteredProblems.length > 0) continue;
+
+                const embed = new EmbedBuilder()
+                    .setColor(0xff0000)
+                    .setTitle(`아직 ${formattedDate}의 문제를 풀지 않았습니다.`)
+                    .setDescription(
+                        `오늘 푼 문제 수: ${user_problems.length}, 조건에 맞는 문제 수: ${filteredProblems.length}`
+                    )
+                    .setFooter({
+                        text: EmbedFooterText,
+                        iconURL: EmbedFooterImageUrl,
+                    });
+
+                try {
+                    const discordUser = await client.users.fetch(
+                        user.discord_id
+                    );
+                    await discordUser.send({ embeds: [embed] });
+                    console.log(
+                        `DM이 ${user.discord_id}에게 성공적으로 전송되었습니다.`
+                    );
+                } catch (error) {
+                    console.error(
+                        `DM을 보내는 도중 오류가 발생했습니다: ${error}`
+                    );
+                }
             }
         }
     });
@@ -254,6 +264,41 @@ client.on("interactionCreate", async (interaction) => {
             registerModal.addComponents(userInputActionRow);
 
             await interaction.showModal(registerModal);
+        } else if (commandName === "알림") {
+            if (await checkDiscordIdExists(interaction.user.id)) {
+                // 알림 켜기/끄기 드롭다운 생성
+                const toggleMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`toggleNotification-${interaction.user.id}`) // 고유 ID
+                    .setPlaceholder("DM 알림 여부를 설정하세요")
+                    .addOptions(
+                        {
+                            label: "켜기",
+                            value: "on",
+                            description: "DM 알림을 켭니다",
+                        },
+                        {
+                            label: "끄기",
+                            value: "off",
+                            description: "DM 알림을 끕니다",
+                        }
+                    );
+
+                const toggleActionRow = new ActionRowBuilder().addComponents(
+                    toggleMenu
+                );
+
+                // 드롭다운 메시지 전송
+                await interaction.reply({
+                    content: "DM 알림을 설정하세요:",
+                    components: [toggleActionRow],
+                    ephemeral: true,
+                });
+            } else {
+                await interaction.reply({
+                    content: "등록된 사용자 정보가 없습니다.",
+                    ephemeral: true,
+                });
+            }
         } else if (commandName === "정보") {
             if (!interaction.guild) {
                 await interaction.reply({
@@ -1147,6 +1192,72 @@ client.on("interactionCreate", async (interaction) => {
                 await interaction.reply({ embeds: [embed], ephemeral: true });
             }
         }
+    }
+});
+
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isStringSelectMenu()) return;
+
+    try {
+        // 첫 번째 드롭다운 처리
+        if (interaction.customId.startsWith("toggleNotification")) {
+            const selectedValue = interaction.values[0]; // 선택된 값
+
+            if (selectedValue === "off") {
+                // 알림 끄기 로직 실행
+
+                const user = await getUserByDiscordId(interaction.user.id);
+                updateUser(user.id, { notice_time: null });
+
+                await interaction.update({
+                    content: "DM 알림이 꺼졌습니다.",
+                    components: [], // 기존 드롭다운 제거
+                });
+            } else if (selectedValue === "on") {
+                // 시간 선택 드롭다운 표시
+                const timeSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`timeSelect-${interaction.user.id}`) // 고유 ID
+                    .setPlaceholder("시간을 선택하세요")
+                    .addOptions(
+                        [...Array(24).keys()].map((hour) => ({
+                            label: `${hour}시 30분`,
+                            value: `${hour}`,
+                        }))
+                    );
+
+                const timeActionRow = new ActionRowBuilder().addComponents(
+                    timeSelectMenu
+                );
+
+                await interaction.update({
+                    content: "DM 알림 시간을 선택하세요:",
+                    components: [timeActionRow],
+                });
+            }
+        }
+
+        // 두 번째 드롭다운 처리 (시간 선택)
+        if (interaction.customId.startsWith("timeSelect")) {
+            const selectedTime = interaction.values[0]; // 선택된 시간
+
+            // 알림 켜기 로직 실행
+            const user = await getUserByDiscordId(interaction.user.id);
+            updateUser(user.id, { notice_time: parseInt(selectedTime) });
+
+            await interaction.update({
+                content: `DM 알림을 ${selectedTime}시로 설정하였습니다.`,
+                components: [], // 기존 드롭다운 제거
+            });
+
+            // 여기서 알림 예약 작업 추가
+            // 예: setTimeout(() => sendNotification(interaction.user, selectedTime), delay);
+        }
+    } catch (error) {
+        console.error("드롭다운 처리 중 오류 발생:", error);
+        await interaction.update({
+            content: "알림 설정 중 오류가 발생했습니다",
+            components: [], // 기존 드롭다운 제거
+        });
     }
 });
 

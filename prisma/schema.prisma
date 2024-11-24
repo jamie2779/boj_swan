@@ -19,6 +19,7 @@ model User {
   solved_count Int
   profile_img  String?  @db.VarChar(255)
   create_date  DateTime @default(now())
+  notice_time  Int?     @default(18)
   is_expired   Boolean  @default(false)
 
   ProblemHolder ProblemHolder[] // User와 ProblemHolder 관계

@@ -46,6 +46,9 @@ const commands = [
         .addStringOption((option) =>
             option.setName("date").setDescription("날짜를 입력하세요.")
         ),
+    new SlashCommandBuilder()
+        .setName("알림")
+        .setDescription("DM 알림을 설정합니다."),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(
