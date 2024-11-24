@@ -1245,7 +1245,7 @@ client.on("interactionCreate", async (interaction) => {
             updateUser(user.id, { notice_time: parseInt(selectedTime) });
 
             await interaction.update({
-                content: `DM 알림을 ${selectedTime}시로 설정하였습니다.`,
+                content: `DM 알림을 ${selectedTime}시 30분으로 설정하였습니다.`,
                 components: [], // 기존 드롭다운 제거
             });
 
