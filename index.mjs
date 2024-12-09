@@ -24,8 +24,8 @@ import {
     getUserById,
     getUserByDiscordId,
     getProblemsSolvedByUserOnDate,
-    getActiveUsers,
     updateUser,
+    getUsersBeforeDate,
 } from "./database.mjs";
 import dotenv from "dotenv";
 
@@ -854,6 +854,8 @@ client.on("interactionCreate", async (interaction) => {
                     let records = "";
                     let strickCount = 0;
                     let notStrickCount = 0;
+                    const userCount = (await getUsersBeforeDate(targetDate))
+                        .length;
 
                     for (let i = 0; i < 7; i++) {
                         const year = targetDate.getFullYear();
@@ -915,7 +917,9 @@ client.on("interactionCreate", async (interaction) => {
                                 name: `성공: ${strickCount}일, 실패: ${notStrickCount}일, 벌금 : ${
                                     notStrickCount === 0
                                         ? 0
-                                        : Math.pow(2, notStrickCount) * 1100
+                                        : Math.pow(2, notStrickCount) *
+                                          100 *
+                                          userCount
                                 }원`,
                                 value: records,
                                 inline: false,
@@ -988,7 +992,7 @@ client.on("interactionCreate", async (interaction) => {
                     targetDate.setDate(targetDate.getDate() - 1);
                 }
 
-                const users = await getActiveUsers();
+                const users = await getUsersBeforeDate(targetDate);
                 let records = "";
                 let total = 0;
                 let count = 0;
@@ -1036,13 +1040,18 @@ client.on("interactionCreate", async (interaction) => {
 
                     if (notStrickCount > 0) {
                         records += `:x: ${user.handle} - ${
-                            Math.pow(2, notStrickCount) * 1100
+                            Math.pow(2, notStrickCount) * 100 * users.length
                         }원\n`;
-                        total += Math.pow(2, notStrickCount) * 1100;
+                        total +=
+                            Math.pow(2, notStrickCount) * 100 * users.length;
                         count++;
                     } else {
                         records += `:white_check_mark: ${user.handle} - 0원\n`;
                     }
+                }
+
+                if (records === "") {
+                    records = "벌금 대상이 없습니다.";
                 }
 
                 //시작날짜

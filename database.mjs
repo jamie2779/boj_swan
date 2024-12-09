@@ -278,6 +278,24 @@ export async function getProblemsSolvedByUserOnDate(user_id, targetDate) {
     }
 }
 
+//특정 날짜 이전에 가입한 유저들 조회하는 함수
+export async function getUsersBeforeDate(targetDate) {
+    try {
+        const newUsers = await prisma.user.findMany({
+            where: {
+                create_date: {
+                    lt: targetDate,
+                },
+            },
+        });
+
+        return newUsers;
+    } catch (error) {
+        console.error("Error fetching new users:", error.message);
+        throw error;
+    }
+}
+
 // 애플리케이션 종료 시 Prisma 클라이언트 연결 해제
 process.on("beforeExit", async () => {
     await prisma.$disconnect();
