@@ -307,7 +307,7 @@ client.on("interactionCreate", async (interaction) => {
                 });
                 return;
             }
-
+            await interaction.deferReply();
             try {
                 // 유저 존재여부 확인
                 if (await checkDiscordIdExists(interaction.user.id)) {
@@ -319,9 +319,8 @@ client.on("interactionCreate", async (interaction) => {
 
                     // 사용자 정보가 없을 경우
                     if (!user) {
-                        await interaction.reply({
+                        await interaction.editReply({
                             content: "등록된 사용자 정보가 없습니다.",
-                            ephemeral: true,
                         });
                         return;
                     }
@@ -393,19 +392,22 @@ client.on("interactionCreate", async (interaction) => {
                         });
 
                     // 임베드 메시지 전송
-                    await interaction.reply({ embeds: [embed] });
+                    await interaction.editReply({ embeds: [embed] });
                 } else {
-                    await interaction.reply({
+                    await interaction.editReply({
                         content: "등록된 사용자 정보가 없습니다.",
-                        ephemeral: true,
                     });
                 }
             } catch (error) {
+                try {
+                    await interaction.editReply({
+                        content:
+                            "사용자 정보를 불러오는 도중 문제가 발생했습니다.",
+                    });
+                } catch (error) {
+                    console.error(error);
+                }
                 console.error(error);
-                await interaction.reply({
-                    content: "사용자 정보를 불러오는 도중 문제가 발생했습니다.",
-                    ephemeral: true,
-                });
             }
         } else if (commandName === "강제갱신") {
             if (!interaction.guild) {
